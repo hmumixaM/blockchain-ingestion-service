@@ -726,14 +726,14 @@ html[data-presenting] .viewer-header {
 
   document.addEventListener('keydown', event => {
     if (outline.open || event.altKey || event.ctrlKey || event.metaKey) return;
-    const target = event.target instanceof Element ? event.target : null;
-    if (target?.closest('select, .arch-figure')) return;
     const key = event.key.toLowerCase();
     if (key === 'escape' && inlinePresentation) {
       inlinePresentation = false;
       syncPresentation();
       return;
     }
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest('select, .arch-figure')) return;
     if (key === 'o' || key === 'f') {
       event.preventDefault();
       if (!event.repeat) {
