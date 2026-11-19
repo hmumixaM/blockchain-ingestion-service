@@ -731,6 +731,9 @@ html[data-presenting] .slide { color-scheme: light; }
   let deadline = 0;
   let ticker = 0;
   let inlinePresentation = false;
+  let outlineFromThumbnail = false;
+  let presentFromThumbnail = false;
+  let filmstripWidth = 0;
 
   const options = [...select.options];
   const outlineButtons = options.map(option => {
@@ -740,8 +743,9 @@ html[data-presenting] .slide { color-scheme: light; }
     button.className = 'viewer-button';
     button.textContent = option.textContent;
     button.addEventListener('click', () => {
-      show(Number(option.value));
       outline.close();
+      show(Number(option.value));
+      if (outlineFromThumbnail) filmstripButtons[index].focus({ preventScroll: true });
     });
     item.append(button);
     outlineList.append(item);
@@ -821,24 +825,36 @@ html[data-presenting] .slide { color-scheme: light; }
     updateDiagram();
   }
 
-  function fit() {
-    if (frame.clientWidth > 0) {
-      root.style.setProperty('--slide-scale', String(frame.clientWidth / 1280));
-    }
+  function resizeViewer() {
+    const frameWidth = frame.clientWidth;
+    if (frameWidth > 0) root.style.setProperty('--slide-scale', String(frameWidth / 1280));
+    const width = filmstrip.clientWidth;
+    if (width === filmstripWidth) return;
+    filmstripWidth = width;
+    revealThumbnail();
   }
 
   function openOutline() {
+    outlineFromThumbnail = filmstrip.contains(document.activeElement);
     outline.showModal();
     outlineButtons[index].focus();
   }
 
   function syncPresentation() {
     const active = Boolean(document.fullscreenElement) || inlinePresentation;
+    const wasActive = document.documentElement.hasAttribute('data-presenting');
     document.documentElement.toggleAttribute('data-presenting', active);
     presentLabel.hidden = active;
     presentExit.hidden = !active;
     present.setAttribute('aria-pressed', String(active));
     if (!active) revealThumbnail();
+    if (active === wasActive || !presentFromThumbnail) return;
+    if (active) {
+      present.focus({ preventScroll: true });
+    } else {
+      filmstripButtons[index].focus({ preventScroll: true });
+      presentFromThumbnail = false;
+    }
   }
 
   async function togglePresentation() {
@@ -847,6 +863,7 @@ html[data-presenting] .slide { color-scheme: light; }
     } else if (inlinePresentation) {
       inlinePresentation = false;
     } else {
+      presentFromThumbnail = filmstrip.contains(document.activeElement);
       try {
         await document.documentElement.requestFullscreen();
       } catch {
@@ -939,9 +956,11 @@ html[data-presenting] .slide { color-scheme: light; }
   });
 
   narrowViewport.addEventListener('change', updateDiagram);
-  new ResizeObserver(() => requestAnimationFrame(fit)).observe(frame);
+  const resizeObserver = new ResizeObserver(() => requestAnimationFrame(resizeViewer));
+  resizeObserver.observe(frame);
+  resizeObserver.observe(filmstrip);
   show(0);
-  fit();
+  resizeViewer();
 })();
 </script>
 </main>
